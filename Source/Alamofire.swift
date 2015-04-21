@@ -80,7 +80,7 @@ public struct Alamofire {
                 return (URLRequest.URLRequest, nil)
             }
             
-            var mutableURLRequest: NSMutableURLRequest! = URLRequest.URLRequest.mutableCopy() as NSMutableURLRequest
+            var mutableURLRequest: NSMutableURLRequest! = URLRequest.URLRequest.mutableCopy() as! NSMutableURLRequest
             var error: NSError? = nil
             
             switch self {
@@ -154,7 +154,8 @@ public struct Alamofire {
         
         func escape(string: String) -> String {
             let legalURLCharactersToBeEscaped: CFStringRef = ":/?&=;+!@#$()',*"
-            return CFURLCreateStringByAddingPercentEscapes(nil, string, nil, legalURLCharactersToBeEscaped, CFStringBuiltInEncodings.UTF8.rawValue)
+            let cfString =  CFURLCreateStringByAddingPercentEscapes(nil, string, nil, legalURLCharactersToBeEscaped, CFStringBuiltInEncodings.UTF8.rawValue)
+            return cfString as! String
         }
     }
     
@@ -198,7 +199,7 @@ public struct Alamofire {
             // Accept-Language HTTP Header; see http://tools.ietf.org/html/rfc7231#section-5.3.5
             let acceptLanguage: String = {
                 var components: [String] = []
-                for (index, languageCode) in enumerate(NSLocale.preferredLanguages() as [String]) {
+                for (index, languageCode) in enumerate(NSLocale.preferredLanguages() as! [String]) {
                     let q = 1.0 - (Double(index) * 0.1)
                     components.append("\(languageCode);q=\(q)")
                     if q <= 0.5 {
@@ -220,7 +221,7 @@ public struct Alamofire {
                     var mutableUserAgent = NSMutableString(string: "\(executable)/\(bundle) (\(version); OS \(os))") as CFMutableString
                     let transform = NSString(string: "Any-Latin; Latin-ASCII; [:^ASCII:] Remove") as CFString
                     if CFStringTransform(mutableUserAgent, nil, transform, 0) == 1 {
-                        return mutableUserAgent as NSString
+                        return mutableUserAgent as NSString as String
                     }
                 }
                 return "Alamofire"
@@ -592,7 +593,7 @@ public struct Alamofire {
         :returns: The request.
         */
         public func response(completionHandler: (NSURLRequest, NSHTTPURLResponse?, AnyObject?, NSError?) -> Void) -> Self {
-            return response(Request.responseDataSerializer(), completionHandler: completionHandler)
+            return response(serializer: Request.responseDataSerializer(), completionHandler: completionHandler)
         }
         
         /**
@@ -729,7 +730,7 @@ public struct Alamofire {
         }
         
         class DataTaskDelegate: TaskDelegate, NSURLSessionDataDelegate {
-            var dataTask: NSURLSessionDataTask! { return task as NSURLSessionDataTask }
+            var dataTask: NSURLSessionDataTask! { return task as! NSURLSessionDataTask }
             
             private var mutableData: NSMutableData
             override var data: NSData? {
@@ -1182,7 +1183,7 @@ extension Alamofire.Manager {
 
 extension Alamofire.Request {
     class UploadTaskDelegate: DataTaskDelegate {
-        var uploadTask: NSURLSessionUploadTask! { return task as NSURLSessionUploadTask }
+        var uploadTask: NSURLSessionUploadTask! { return task as! NSURLSessionUploadTask }
         var uploadProgress: ((Int64, Int64, Int64) -> Void)!
         
         // MARK: NSURLSessionTaskDelegate
@@ -1217,7 +1218,7 @@ extension Alamofire.Manager {
         let request = Alamofire.Request(session: session, task: downloadTask)
         if let downloadDelegate = request.delegate as? Alamofire.Request.DownloadTaskDelegate {
             downloadDelegate.downloadTaskDidFinishDownloadingToURL = { (session, downloadTask, URL) in
-                return destination(URL, downloadTask.response as NSHTTPURLResponse)
+                return destination(URL, downloadTask.response as! NSHTTPURLResponse)
             }
         }
         delegate[request.delegate.task] = request.delegate
@@ -1288,7 +1289,7 @@ extension Alamofire.Request {
     }
     
     class DownloadTaskDelegate: TaskDelegate, NSURLSessionDownloadDelegate {
-        var downloadTask: NSURLSessionDownloadTask! { return task as NSURLSessionDownloadTask }
+        var downloadTask: NSURLSessionDownloadTask! { return task as! NSURLSessionDownloadTask }
         var downloadProgress: ((Int64, Int64, Int64) -> Void)?
         
         var resumeData: NSData?
@@ -1340,7 +1341,7 @@ extension Alamofire.Request: Printable {
             components.append(request.HTTPMethod!)
         }
         
-        components.append(request.URL.absoluteString!)
+        components.append(request.URL!.absoluteString!)
         
         if response != nil {
             components.append("(\(response!.statusCode))")
@@ -1361,9 +1362,9 @@ extension Alamofire.Request: DebugPrintable {
         }
         
         if let credentialStorage = self.session.configuration.URLCredentialStorage {
-            let protectionSpace = NSURLProtectionSpace(host: URL.host!, port: URL.port?.integerValue ?? 0, `protocol`: URL.scheme!, realm: URL.host!, authenticationMethod: NSURLAuthenticationMethodHTTPBasic)
+            let protectionSpace = NSURLProtectionSpace(host: URL!.host!, port: URL!.port?.integerValue ?? 0, `protocol`: URL!.scheme!, realm: URL!.host!, authenticationMethod: NSURLAuthenticationMethodHTTPBasic)
             if let credentials = credentialStorage.credentialsForProtectionSpace(protectionSpace)?.values.array {
-                for credential: NSURLCredential in (credentials as [NSURLCredential]) {
+                for credential: NSURLCredential in (credentials as! [NSURLCredential]) {
                     components.append("-u \(credential.user!):\(credential.password!)")
                 }
             } else {
@@ -1374,7 +1375,7 @@ extension Alamofire.Request: DebugPrintable {
         }
         
         if let cookieStorage = session.configuration.HTTPCookieStorage {
-            if let cookies = cookieStorage.cookiesForURL(URL) as? [NSHTTPCookie] {
+            if let cookies = cookieStorage.cookiesForURL(URL!) as? [NSHTTPCookie] {
                 if !cookies.isEmpty {
                     let string = cookies.reduce(""){ $0 + "\($1.name)=\($1.value ?? String());" }
                     components.append("-b \"\(string.substringToIndex(string.endIndex.predecessor()))\"")
@@ -1410,7 +1411,7 @@ extension Alamofire.Request: DebugPrintable {
             }
         }
         
-        components.append("\"\(URL.absoluteString!)\"")
+        components.append("\"\(URL!.absoluteString!)\"")
         
         return join(" \\\n\t", components)
     }
@@ -1595,7 +1596,7 @@ extension NSURLComponents: URLStringConvertible {
 
 extension NSURLRequest: URLStringConvertible {
     public var URLString: String {
-        return URL.URLString
+        return URL!.URLString
     }
 }
 
